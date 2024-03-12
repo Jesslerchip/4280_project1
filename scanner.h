@@ -6,6 +6,20 @@
 #include "token.h"
 #include <stdio.h>
 
+#define MAX_STATES 5
+#define MAX_CHARS 128
+
+enum State {
+    START,
+    IDENTIFIER,
+    INTEGER,
+    COMMENT,
+    OPERATOR
+};
+
+extern int fsaTable[MAX_STATES][MAX_CHARS];
+void initFSATable();
+int getNextState(int currentState, unsigned char c);
 Token getToken(FILE* inputFile);
 
 #endif

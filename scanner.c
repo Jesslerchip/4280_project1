@@ -9,23 +9,97 @@
 
 int lineNumber = 1;
 int charNumber = 1;
+int fsaTable[MAX_STATES][MAX_CHARS];
 
 char reservedWords[16][9] = {
     "start", "stop", "while", "repeat", "until", "label", "return",
     "cin", "cout", "tape", "jump", "if", "then", "pick", "create", "set"
 };
 
+void initFSATable() {
+    // Initialize all entries to -1 (invalid transition)
+    memset(fsaTable, -1, sizeof(fsaTable));
+
+    // Define valid transitions
+    for (int i = 'a'; i <= 'z'; i++) {
+        fsaTable[START][i] = IDENTIFIER;
+        fsaTable[IDENTIFIER][i] = IDENTIFIER;
+    }
+    for (int i = 'A'; i <= 'Z'; i++) {
+        fsaTable[START][i] = IDENTIFIER;
+        fsaTable[IDENTIFIER][i] = IDENTIFIER;
+    }
+    for (int i = '0'; i <= '9'; i++) {
+        fsaTable[START][i] = INTEGER;
+        fsaTable[IDENTIFIER][i] = IDENTIFIER;
+        fsaTable[INTEGER][i] = INTEGER;
+    }
+    fsaTable[IDENTIFIER]['_'] = IDENTIFIER;
+    fsaTable[START]['/'] = COMMENT;
+    fsaTable[COMMENT]['/'] = COMMENT;
+    fsaTable[START]['='] = OPERATOR;
+    fsaTable[START]['<'] = OPERATOR;
+    fsaTable[START]['>'] = OPERATOR;
+    fsaTable[START][':'] = OPERATOR;
+    fsaTable[START]['+'] = OPERATOR;
+    fsaTable[START]['-'] = OPERATOR;
+    fsaTable[START]['*'] = OPERATOR;
+    fsaTable[START]['/'] = OPERATOR;
+    fsaTable[START]['^'] = OPERATOR;
+    fsaTable[START]['.'] = OPERATOR;
+    fsaTable[START]['('] = OPERATOR;
+    fsaTable[START][')'] = OPERATOR;
+    fsaTable[START][','] = OPERATOR;
+    fsaTable[START]['{'] = OPERATOR;
+    fsaTable[START]['}'] = OPERATOR;
+    fsaTable[START][';'] = OPERATOR;
+    fsaTable[START]['['] = OPERATOR;
+    fsaTable[START][']'] = OPERATOR;
+    fsaTable[START]['|'] = OPERATOR;
+    fsaTable[START]['&'] = OPERATOR;
+    fsaTable[START]['!'] = OPERATOR;
+    fsaTable[OPERATOR]['='] = OPERATOR;
+    fsaTable[OPERATOR]['!'] = OPERATOR;
+    fsaTable[OPERATOR]['|'] = OPERATOR;
+    fsaTable[OPERATOR]['&'] = OPERATOR;
+}
+
+int getNextState(int currentState, unsigned char c) {
+    return fsaTable[currentState][c];
+}
+
 Token getToken(FILE* inputFile) {
     Token token;
     char buffer[MAX_TOKEN_LEN + 1];
     int bufferIndex = 0;
-    int state = 0;
+    enum State state = START;
     int c;
 
     while (1) {
         c = fgetc(inputFile);
 
         if (c == EOF) {
+            if (state == IDENTIFIER || state == INTEGER || state == OPERATOR) {
+                ungetc(c, inputFile);
+                return getToken(inputFile);
+            }
+            if (bufferIndex > 0) {
+                buffer[bufferIndex] = '\0';
+                token.tokenInstance = strdup(buffer);
+                int i;
+                for (i = 0; i < 16; i++) {
+                    if (strcmp(reservedWords[i], buffer) == 0) {
+                        token.tokenID = KEYWORD_TK;
+                        break;
+                    }
+                }
+                if (i == 16) {
+                    token.tokenID = ID_TK;
+                }
+                token.lineNumber = lineNumber;
+                token.charNumber = charNumber - bufferIndex;
+                return token;
+            }
             token.tokenID = EOF_TK;
             token.tokenInstance = NULL;
             token.lineNumber = lineNumber;
@@ -33,40 +107,48 @@ Token getToken(FILE* inputFile) {
             return token;
         }
 
-        switch (state) {
-            case 0:
-                if (isalpha(c)) {
-                    state = 1;
+        enum State nextState = getNextState(state, c);
+
+        switch (nextState) {
+            case IDENTIFIER:
+                if (bufferIndex < MAX_TOKEN_LEN) {
                     buffer[bufferIndex++] = c;
-                } else if (isdigit(c)) {
-                    state = 3;
-                    buffer[bufferIndex++] = c;
-                } else if (c == '/' && (c = fgetc(inputFile)) == '/') {
-                    state = 5;
-                } else if (strchr("=<>:+-*/^.(),{}[];|&!", c) != NULL) {
-                    state = 6;
-                    buffer[bufferIndex++] = c;
-                } else if (isspace(c)) {
-                    if (c == '\n') {
-                        lineNumber++;
-                        charNumber = 1;
-                    } else {
-                        charNumber++;
-                    }
                 } else {
-                    printf("SCANNER ERROR: Invalid character '%c' at line %d, char %d\n", c, lineNumber, charNumber);
-                    charNumber++;
+                    printf("SCANNER ERROR: Token too long at line %d, char %d\n", lineNumber, charNumber);
                 }
                 break;
 
-            case 1:
-                if (isalnum(c) || c == '_') {
-                    if (bufferIndex < MAX_TOKEN_LEN) {
-                        buffer[bufferIndex++] = c;
-                    } else {
-                        printf("SCANNER ERROR: Identifier too long at line %d, char %d\n", lineNumber, charNumber);
-                    }
+            case INTEGER:
+                if (bufferIndex < MAX_TOKEN_LEN) {
+                    buffer[bufferIndex++] = c;
                 } else {
+                    printf("SCANNER ERROR: Token too long at line %d, char %d\n", lineNumber, charNumber);
+                }
+                break;
+
+            case COMMENT:
+                while (c != '\n' && c != EOF) {
+                    c = fgetc(inputFile);
+                    charNumber++;
+                }
+                if (c == '\n') {
+                    lineNumber++;
+                    charNumber = 1;
+                }
+                state = START;
+                bufferIndex = 0;
+                continue;
+
+            case OPERATOR:
+                if (bufferIndex < MAX_TOKEN_LEN) {
+                    buffer[bufferIndex++] = c;
+                } else {
+                    printf("SCANNER ERROR: Token too long at line %d, char %d\n", lineNumber, charNumber);
+                }
+                break;
+
+            default:
+                if (state == IDENTIFIER) {
                     buffer[bufferIndex] = '\0';
                     ungetc(c, inputFile);
                     token.tokenInstance = strdup(buffer);
@@ -81,93 +163,44 @@ Token getToken(FILE* inputFile) {
                         token.tokenID = ID_TK;
                     }
                     token.lineNumber = lineNumber;
-                    token.charNumber = charNumber;
-                    charNumber += bufferIndex;
+                    token.charNumber = charNumber - bufferIndex;
                     return token;
-                }
-                break;
-
-            case 3:
-                if (isdigit(c)) {
-                    if (bufferIndex < MAX_TOKEN_LEN) {
-                        buffer[bufferIndex++] = c;
-                    } else {
-                        printf("SCANNER ERROR: Integer too long at line %d, char %d\n", lineNumber, charNumber);
-                    }
-                } else {
+                } else if (state == INTEGER) {
                     buffer[bufferIndex] = '\0';
                     ungetc(c, inputFile);
                     token.tokenInstance = strdup(buffer);
                     token.tokenID = INT_TK;
                     token.lineNumber = lineNumber;
-                    token.charNumber = charNumber;
-                    charNumber += bufferIndex;
+                    token.charNumber = charNumber - bufferIndex;
                     return token;
-                }
-                break;
-
-            case 5:
-                while (c != '\n' && c != EOF) {
-                    c = fgetc(inputFile);
-                }
-                if (c == '\n') {
-                    lineNumber++;
-                    charNumber = 1;
-                }
-                state = 0;
-                break;
-
-        case 6:
-            if (strchr("=<>:+-*/^.(),{}[];|&!", c) != NULL) {
-                if (bufferIndex == 0 || (bufferIndex == 1 && (buffer[0] == '=' || buffer[0] == ':' || buffer[0] == '|' || buffer[0] == '&')) || (bufferIndex == 2 && (buffer[1] == '!'))) {
-                    buffer[bufferIndex++] = c;
-                    if (bufferIndex == 2 && (strcmp(buffer, "==") == 0 || strcmp(buffer, ":=") == 0 || strcmp(buffer, "||") == 0 || strcmp(buffer, "&&") == 0)) {
-                        buffer[bufferIndex] = '\0';
-                        token.tokenInstance = strdup(buffer);
-                        token.tokenID = OPERATOR_TK;
-                        token.lineNumber = lineNumber;
-                        token.charNumber = charNumber;
-                        charNumber += bufferIndex;
-                        return token;
-                    }
-                    else if (bufferIndex == 3 && (strcmp(buffer, "=!=") == 0)) {
-                        buffer[bufferIndex] = '\0';
-                        token.tokenInstance = strdup(buffer);
-                        token.tokenID = OPERATOR_TK;
-                        token.lineNumber = lineNumber;
-                        token.charNumber = charNumber;
-                        charNumber += bufferIndex;
-                        return token;
-                    }
-                } else {
+                } else if (state == OPERATOR) {
                     ungetc(c, inputFile);
-                    buffer[bufferIndex] = '\0';
-                    token.tokenInstance = strdup(buffer);
-                    token.tokenID = OPERATOR_TK;
-                    token.lineNumber = lineNumber;
-                    token.charNumber = charNumber;
-                    charNumber += bufferIndex;
-                    return token;
-                }
-            } else {
-                ungetc(c, inputFile);
-                if (bufferIndex > 0) {
-                    buffer[bufferIndex] = '\0';
-                    token.tokenInstance = strdup(buffer);
-                    token.tokenID = OPERATOR_TK;
-                    token.lineNumber = lineNumber;
-                    token.charNumber = charNumber;
-                    charNumber += bufferIndex;
-                    return token;
+                    if (bufferIndex > 0) {
+                        buffer[bufferIndex] = '\0';
+                        token.tokenInstance = strdup(buffer);
+                        token.tokenID = OPERATOR_TK;
+                        token.lineNumber = lineNumber;
+                        token.charNumber = charNumber - bufferIndex;
+                        return token;
+                    }
+                } else if (isspace(c)) {
+                    state = START;
+                    if (c == '\n') {
+                        lineNumber++;
+                        charNumber = 1;
+                    } else {
+                        charNumber++;
+                    }
+                    bufferIndex = 0;
+                    continue;
                 } else {
                     printf("SCANNER ERROR: Invalid character '%c' at line %d, char %d\n", c, lineNumber, charNumber);
                     charNumber++;
-                    state = 0;
-                    buffer[0] = '\0';
-                    bufferIndex = 0;
                 }
-            }
-            break;
+                break;
         }
+
+        state = nextState;
+        charNumber++;
     }
 }
