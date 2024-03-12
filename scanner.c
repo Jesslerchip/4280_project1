@@ -160,14 +160,16 @@ Token getToken(FILE* inputFile) {
                     token.tokenInstance = strdup(buffer);
                     int i;
                     for (i = 0; i < 16; i++) {
-                        if (strcmp(reservedWords[i], buffer) == 0) {
+                        if (strncmp(reservedWords[i], buffer, strlen(reservedWords[i])) == 0) {
                             token.tokenID = KEYWORD_TK;
-                            break;
+                            token.tokenInstance = strdup(reservedWords[i]);
+                            token.lineNumber = lineNumber;
+                            token.charNumber = charNumber - strlen(reservedWords[i]);
+                            fseek(inputFile, -strlen(buffer) + strlen(reservedWords[i]), SEEK_CUR);
+                            return token;
                         }
                     }
-                    if (i == 16) {
-                        token.tokenID = ID_TK;
-                    }
+                    token.tokenID = ID_TK;
                     token.lineNumber = lineNumber;
                     token.charNumber = charNumber - bufferIndex;
                     return token;
