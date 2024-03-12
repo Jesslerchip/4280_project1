@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Fairly simple. Checks the token type and prints relevant information.
 void testScanner(FILE* inputFile) {
     Token token;
     do {

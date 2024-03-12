@@ -9,6 +9,7 @@
 #define MAX_STATES 4
 #define MAX_CHARS 128
 
+// The states of the FSA. Comments don't have a state because they just get ignored. Hopefully this is okay?
 enum State {
     START,
     IDENTIFIER,

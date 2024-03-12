@@ -11,11 +11,13 @@ int lineNumber = 1;
 int charNumber = 1;
 int fsaTable[MAX_STATES][MAX_CHARS];
 
+// Keywords to check for
 char reservedWords[16][9] = {
     "start", "stop", "while", "repeat", "until", "label", "return",
     "cin", "cout", "tape", "jump", "if", "then", "pick", "create", "set"
 };
 
+// Initialize FSA table
 void initFSATable() {
     // Initialize all entries to -1 (invalid transition)
     memset(fsaTable, -1, sizeof(fsaTable));
@@ -62,10 +64,13 @@ void initFSATable() {
     fsaTable[OPERATOR]['&'] = OPERATOR;
 }
 
+// Returns the next state given the current state and input character
 int getNextState(int currentState, unsigned char c) {
     return fsaTable[currentState][c];
 }
 
+
+// Driver for FSA table, reads input file and returns tokens
 Token getToken(FILE* inputFile) {
     Token token;
     char buffer[MAX_TOKEN_LEN + 1];
@@ -77,6 +82,7 @@ Token getToken(FILE* inputFile) {
         c = fgetc(inputFile);
 
     if (c == EOF) {
+        // If the buffer contains a token, return it
         if (state == IDENTIFIER || state == INTEGER || state == OPERATOR) {
             buffer[bufferIndex] = '\0';
             token.tokenInstance = strdup(buffer);
@@ -99,6 +105,7 @@ Token getToken(FILE* inputFile) {
             token.lineNumber = lineNumber;
             token.charNumber = charNumber - bufferIndex;
             return token;
+        // If the buffer is empty, return EOF
         } else {
             token.tokenID = EOF_TK;
             token.tokenInstance = NULL;
@@ -110,6 +117,7 @@ Token getToken(FILE* inputFile) {
 
         enum State nextState = getNextState(state, c);
 
+        // Handle state transitions
         switch (nextState) {
             case IDENTIFIER:
                 if (bufferIndex < MAX_TOKEN_LEN) {
