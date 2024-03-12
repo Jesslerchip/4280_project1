@@ -1,6 +1,6 @@
 main
 start
-// _watch out for werewolf horse archers
+// watch out for werewolf horse archers
 label poll:if ( dog == werewolf &&horse<=mongol)
    jump einstein 5700
 while ( cat =!= dog );  

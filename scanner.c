@@ -35,8 +35,7 @@ void initFSATable() {
         fsaTable[INTEGER][i] = INTEGER;
     }
     fsaTable[IDENTIFIER]['_'] = IDENTIFIER;
-    fsaTable[START]['/'] = COMMENT;
-    fsaTable[COMMENT]['/'] = COMMENT;
+    fsaTable[START]['/'] = OPERATOR;
     fsaTable[START]['='] = OPERATOR;
     fsaTable[START]['<'] = OPERATOR;
     fsaTable[START]['>'] = OPERATOR;
@@ -44,7 +43,6 @@ void initFSATable() {
     fsaTable[START]['+'] = OPERATOR;
     fsaTable[START]['-'] = OPERATOR;
     fsaTable[START]['*'] = OPERATOR;
-    fsaTable[START]['/'] = OPERATOR;
     fsaTable[START]['^'] = OPERATOR;
     fsaTable[START]['.'] = OPERATOR;
     fsaTable[START]['('] = OPERATOR;
@@ -78,14 +76,11 @@ Token getToken(FILE* inputFile) {
     while (1) {
         c = fgetc(inputFile);
 
-        if (c == EOF) {
-            if (state == IDENTIFIER || state == INTEGER || state == OPERATOR) {
-                ungetc(c, inputFile);
-                return getToken(inputFile);
-            }
-            if (bufferIndex > 0) {
-                buffer[bufferIndex] = '\0';
-                token.tokenInstance = strdup(buffer);
+    if (c == EOF) {
+        if (state == IDENTIFIER || state == INTEGER || state == OPERATOR) {
+            buffer[bufferIndex] = '\0';
+            token.tokenInstance = strdup(buffer);
+            if (state == IDENTIFIER) {
                 int i;
                 for (i = 0; i < 16; i++) {
                     if (strcmp(reservedWords[i], buffer) == 0) {
@@ -96,16 +91,22 @@ Token getToken(FILE* inputFile) {
                 if (i == 16) {
                     token.tokenID = ID_TK;
                 }
-                token.lineNumber = lineNumber;
-                token.charNumber = charNumber - bufferIndex;
-                return token;
+            } else if (state == INTEGER) {
+                token.tokenID = INT_TK;
+            } else if (state == OPERATOR) {
+                token.tokenID = OPERATOR_TK;
             }
+            token.lineNumber = lineNumber;
+            token.charNumber = charNumber - bufferIndex;
+            return token;
+        } else {
             token.tokenID = EOF_TK;
             token.tokenInstance = NULL;
             token.lineNumber = lineNumber;
             token.charNumber = charNumber;
             return token;
         }
+    }
 
         enum State nextState = getNextState(state, c);
 
@@ -126,21 +127,26 @@ Token getToken(FILE* inputFile) {
                 }
                 break;
 
-            case COMMENT:
-                while (c != '\n' && c != EOF) {
-                    c = fgetc(inputFile);
-                    charNumber++;
-                }
-                if (c == '\n') {
-                    lineNumber++;
-                    charNumber = 1;
-                }
-                state = START;
-                bufferIndex = 0;
-                continue;
-
             case OPERATOR:
                 if (bufferIndex < MAX_TOKEN_LEN) {
+                    if (c == '/') {
+                        int nextChar = fgetc(inputFile);
+                        if (nextChar == '/') {
+                            while (c != '\n' && c != EOF) {
+                                c = fgetc(inputFile);
+                                charNumber++;
+                            }
+                            if (c == '\n') {
+                                lineNumber++;
+                                charNumber = 1;
+                            }
+                            state = START;
+                            bufferIndex = 0;
+                            continue;
+                        } else {
+                            ungetc(nextChar, inputFile);
+                        }
+                    }
                     buffer[bufferIndex++] = c;
                 } else {
                     printf("SCANNER ERROR: Token too long at line %d, char %d\n", lineNumber, charNumber);

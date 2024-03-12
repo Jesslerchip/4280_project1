@@ -6,14 +6,13 @@
 #include "token.h"
 #include <stdio.h>
 
-#define MAX_STATES 5
+#define MAX_STATES 4
 #define MAX_CHARS 128
 
 enum State {
     START,
     IDENTIFIER,
     INTEGER,
-    COMMENT,
     OPERATOR
 };
 
