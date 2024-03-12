@@ -1,3 +1,5 @@
+// Jessica Seabolt CMP SCI 4280 Project 1 Updated 03/12/2024
+
 #include <stdio.h>
 #include "testScanner.h"
 
@@ -15,6 +17,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         inputFile = stdin;
+        printf("Enter input (press Ctrl+D on a new line to stop):\n");
     }
 
     testScanner(inputFile);

@@ -1,13 +1,38 @@
+// Jessica Seabolt CMP SCI 4280 Project 1 Updated 03/12/2024
+
 #include "scanner.h"
 #include "token.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void testScanner(FILE* inputFile) {
     Token token;
     do {
         token = getToken(inputFile);
-        // Print the token information
-        printf("Token Type: %d, Token Instance: %s, Line: %d, Char: %d\n",
-               token.tokenID, token.tokenInstance, token.lineNumber, token.charNumber);
+        const char* tokenTypeName;
+        switch (token.tokenID) {
+            case ID_TK:
+                tokenTypeName = "Identifier";
+                break;
+            case KEYWORD_TK:
+                tokenTypeName = "Keyword";
+                break;
+            case INT_TK:
+                tokenTypeName = "Integer";
+                break;
+            case OPERATOR_TK:
+                tokenTypeName = "Operator";
+                break;
+            case EOF_TK:
+                tokenTypeName = "End of File";
+                break;
+            default:
+                tokenTypeName = "Unknown";
+                break;
+        }
+        printf("%s: %s, Line: %d, Char: %d\n", tokenTypeName, token.tokenInstance ? token.tokenInstance : "", token.lineNumber, token.charNumber);
+        if (token.tokenInstance) {
+            free(token.tokenInstance);
+        }
     } while (token.tokenID != EOF_TK);
 }

@@ -1,4 +1,8 @@
-// token.h
+// Jessica Seabolt CMP SCI 4280 Project 1 Updated 03/12/2024
+
+#ifndef TOKEN_H
+#define TOKEN_H
+
 typedef struct {
     int tokenID;
     char* tokenInstance;
@@ -13,3 +17,5 @@ enum TokenType {
     OPERATOR_TK,
     EOF_TK
 };
+
+#endif
