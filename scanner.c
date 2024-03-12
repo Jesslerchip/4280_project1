@@ -19,9 +19,6 @@ char reservedWords[16][9] = {
 
 // Initialize FSA table
 void initFSATable() {
-    // Because we aren't using C99 I guess
-    int i;
-
 
     // Initialize all entries to -1 (invalid transition)
     memset(fsaTable, -1, sizeof(fsaTable));

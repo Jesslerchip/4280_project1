@@ -2,7 +2,7 @@
 
 CC = gcc
 
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -Werror -std=c99
 
 SOURCES = main.c scanner.c testScanner.c
 
