@@ -1,9 +1,0 @@
-main
-start
-// watch out for werewolf horse archers
-label poll:if ( dog == werewolf &&horse<=mongol)
-   jump einstein 5700
-while ( cat =!= dog );  
-label 5700einstein
-func repeatuntil [ pick ;greatwall]
-stop
